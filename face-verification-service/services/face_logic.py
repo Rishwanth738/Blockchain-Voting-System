@@ -1,19 +1,38 @@
 """
 Face encoding and liveness verification using face_recognition and landmarks.
 """
-import face_recognition
+import face_recognition  # type: ignore[import-not-found]
 import numpy as np
 import cv2
 from scipy.spatial import distance as dist
+from io import BytesIO
 
+def encode_face(image_bytes: bytes):
+    """
+    Accepts raw image bytes and returns a face encoding.
+    Ensures image is RGB uint8 and contiguous for dlib compatibility.
+    """
+    if not image_bytes:
+        return None
 
-def encode_face(image_nparray):
-    rgb_img = cv2.cvtColor(image_nparray, cv2.COLOR_BGR2RGB)
+    try:
+        rgb_img = face_recognition.load_image_file(BytesIO(image_bytes))
+
+        # Ensure correct dtype and memory layout
+        rgb_img = np.ascontiguousarray(rgb_img, dtype=np.uint8)
+
+    except Exception as e:
+        print(f"DEBUG load_image_file failed: {e}")
+        return None
+
+    print(f"DEBUG encode_face shape={rgb_img.shape}, dtype={rgb_img.dtype}")
+
     encodings = face_recognition.face_encodings(rgb_img)
-    if len(encodings) > 0:
-        return encodings[0].tolist()
-    return None
 
+    if encodings:
+        return encodings[0].tolist()
+
+    return None
 
 def get_ear(eye_points):
     A = dist.euclidean(eye_points[1], eye_points[5])
@@ -72,7 +91,12 @@ def check_expression(landmarks, challenge_type):
 def verify_face_match_with_challenge(
     known_encoding, live_image_nparray, challenge_type="smile"
 ):
-    rgb_img = cv2.cvtColor(live_image_nparray, cv2.COLOR_BGR2RGB)
+    if live_image_nparray is None:
+        return False, "Invalid image data."
+
+    # cv2.imdecode returns BGR; face_recognition requires RGB
+    bgr_img = np.ascontiguousarray(live_image_nparray, dtype=np.uint8)
+    rgb_img = cv2.cvtColor(bgr_img, cv2.COLOR_BGR2RGB)
     landmarks_list = face_recognition.face_landmarks(rgb_img)
 
     if not landmarks_list:
@@ -83,12 +107,14 @@ def verify_face_match_with_challenge(
         if not is_live:
             return False, f"Liveness Failed: {live_msg}"
 
-    live_encoding = encode_face(live_image_nparray)
-    if live_encoding is None:
+    live_encodings = face_recognition.face_encodings(rgb_img)
+    if not live_encodings:
         return False, "Face encoding failed."
 
+    live_encoding = live_encodings[0]
+
     results = face_recognition.compare_faces(
-        [np.array(known_encoding)], np.array(live_encoding), tolerance=0.5
+        [np.array(known_encoding)], live_encoding, tolerance=0.6
     )
 
     if results[0]:
