@@ -78,22 +78,18 @@ export default function Home() {
   // Voting & Admin
   const [status, setStatus] = useState("");
   const [adminPass, setAdminPass] = useState("");
-  const [counts, setCounts] = useState<number[]>([]);
+  const [counts, setCounts] = useState<any[]>([]);
 
   const [candidates, setCandidates] = useState<any[]>([]);
 
-  async function fetchCandidates() {
+  useEffect(() => {
+    supabase.from("candidates").select("*").order("id").then(({ data }) => {
+      if (data) setCandidates(data);
+    });
+  }, []);
+
+  function fetchCandidates() {
     setScreen("candidates");
-    setStatus("Loading candidates...");
-    try {
-      const { data, error } = await supabase.from("candidates").select("*").order("id");
-      if (error) throw error;
-      setCandidates(data || []);
-      setStatus("");
-    } catch (e: any) {
-      console.error(e);
-      setStatus("Error fetching candidates: " + e.message);
-    }
   }
 
   // Styles and PageWrapper component correctly hoisted above component to prevent focus resets on keystrokes.
@@ -364,8 +360,8 @@ export default function Home() {
         <h2 style={{ fontFamily: inter.style.fontFamily, fontWeight: 500, fontSize: "28px", marginBottom: "10px" }}>Digital Ballot Box</h2>
         <p style={{ color: "#aaa", marginBottom: "30px" }}>Secure ID: {voterId}</p>
         <div style={{ display: "flex", flexDirection: "column", gap: "12px", width: "80%", margin: "0 auto" }}>
-          {[0, 1, 2].map(c => (
-            <button key={c} style={{...button, width: "100%", margin: 0}} onClick={() => signVote(c)}>Vote for Candidate {c}</button>
+          {candidates.map(c => (
+            <button key={c.id} style={{...button, width: "100%", margin: 0}} onClick={() => signVote(c.id)}>Vote for {c.name}</button>
           ))}
         </div>
         <p style={{ marginTop: "20px", color: "#00ffcc" }}>{status}</p>
@@ -413,8 +409,8 @@ export default function Home() {
         <div style={{ background: "rgba(0,0,0,0.4)", borderRadius: "10px", padding: "20px", textAlign: "left" }}>
           {counts.length === 0 ? <p style={{color: "#aaa", textAlign: "center"}}>No sync data.</p> : counts.map((c, i) => (
             <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: "10px 0", borderBottom: "1px solid rgba(255,255,255,0.1)", color: "white" }}>
-              <span>Candidate {i}</span>
-              <span style={{ fontWeight: "bold", color: "#00ffcc" }}>{c} Votes</span>
+              <span>{c.name}</span>
+              <span style={{ fontWeight: "bold", color: "#00ffcc" }}>{c.votes} Votes</span>
             </div>
           ))}
         </div>

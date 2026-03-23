@@ -140,15 +140,26 @@ app.post("/submit-vote", async (req, res) => {
 
 /* ----- ADMIN COUNT ----- */
 app.get("/vote-counts", async (req, res) => {
-  const readContract = new ethers.Contract(CONTRACT_ADDRESS, readAbi, provider);
+  try {
+    const readContract = new ethers.Contract(CONTRACT_ADDRESS, readAbi, provider);
 
-  const counts = [];
+    const { data: candidates, error } = await supabase.from("candidates").select("id, name").order("id");
+    if (error || !candidates) return res.status(500).json({ error: "DB Error" });
 
-  for (let i = 1; i <= 5; i++) {
-    counts.push(await readContract.getVotes(i));
+    const counts = [];
+    for (const c of candidates) {
+      const rawCount = await readContract.getVotes(c.id);
+      counts.push({
+        id: c.id,
+        name: c.name,
+        votes: Number(rawCount)
+      });
+    }
+
+    res.json(counts);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
   }
-
-  res.json(counts.map(Number));
 });
 
 const PORT = process.env.PORT || 5000;

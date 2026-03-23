@@ -83,13 +83,9 @@ async def verify_user(
         raise HTTPException(status_code=403, detail="This voter has already voted.")
 
     image_data = await file.read()
-    nparr = np.frombuffer(image_data, np.uint8)
-    img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
-    if img is None:
-        raise HTTPException(status_code=400, detail="Invalid image file.")
-
+    
     is_match, message = verify_face_match_with_challenge(
-        face_encoding, img, challenge_type
+        face_encoding, image_data, challenge_type
     )
 
     if is_match:

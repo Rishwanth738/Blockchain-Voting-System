@@ -1,37 +1,47 @@
 """
 Face encoding and liveness verification using face_recognition and landmarks.
+Refactored to handle mobile camera EXIF rotation and image scaling.
 """
 import face_recognition  # type: ignore[import-not-found]
 import numpy as np
 import cv2
 from scipy.spatial import distance as dist
-from io import BytesIO
+from PIL import Image, ImageOps
+import io
 
-def encode_face(image_bytes: bytes):
+def decode_image_bytes(image_bytes: bytes):
     """
-    Accepts raw image bytes and returns a face encoding.
-    Ensures image is RGB uint8 and contiguous for dlib compatibility.
+    Decodes raw bytes into a numpy RGB array while correcting EXIF orientation
+    and scaling down massive 4K phone camera pictures.
     """
     if not image_bytes:
         return None
-
     try:
-        rgb_img = face_recognition.load_image_file(BytesIO(image_bytes))
-
-        # Ensure correct dtype and memory layout
-        rgb_img = np.ascontiguousarray(rgb_img, dtype=np.uint8)
-
+        pil_img = Image.open(io.BytesIO(image_bytes))
+        pil_img = ImageOps.exif_transpose(pil_img)
+        if pil_img.mode != "RGB":
+            pil_img = pil_img.convert("RGB")
+        
+        rgb_img = np.array(pil_img)
+        
+        h, w = rgb_img.shape[:2]
+        if max(h, w) > 1200:
+            scale = 1200.0 / max(h, w)
+            rgb_img = cv2.resize(rgb_img, (0,0), fx=scale, fy=scale)
+            
+        return rgb_img
     except Exception as e:
-        print(f"DEBUG load_image_file failed: {e}")
+        print(f"DEBUG Image decoding failed: {e}")
         return None
 
-    print(f"DEBUG encode_face shape={rgb_img.shape}, dtype={rgb_img.dtype}")
+def encode_face(image_bytes: bytes):
+    rgb_img = decode_image_bytes(image_bytes)
+    if rgb_img is None:
+        return None
 
     encodings = face_recognition.face_encodings(rgb_img)
-
     if encodings:
         return encodings[0].tolist()
-
     return None
 
 def get_ear(eye_points):
@@ -40,12 +50,10 @@ def get_ear(eye_points):
     C = dist.euclidean(eye_points[0], eye_points[3])
     return (A + B) / (2.0 * C)
 
-
 def get_mar(mouth_points):
     A = dist.euclidean(mouth_points[3], mouth_points[9])
     B = dist.euclidean(mouth_points[0], mouth_points[6])
     return A / B
-
 
 def check_expression(landmarks, challenge_type):
     left_eye = landmarks["left_eye"]
@@ -87,20 +95,17 @@ def check_expression(landmarks, challenge_type):
 
     return True, "Challenge Passed"
 
-
 def verify_face_match_with_challenge(
-    known_encoding, live_image_nparray, challenge_type="smile"
+    known_encoding, image_bytes: bytes, challenge_type="smile"
 ):
-    if live_image_nparray is None:
+    rgb_img = decode_image_bytes(image_bytes)
+    if rgb_img is None:
         return False, "Invalid image data."
 
-    # cv2.imdecode returns BGR; face_recognition requires RGB
-    bgr_img = np.ascontiguousarray(live_image_nparray, dtype=np.uint8)
-    rgb_img = cv2.cvtColor(bgr_img, cv2.COLOR_BGR2RGB)
     landmarks_list = face_recognition.face_landmarks(rgb_img)
 
     if not landmarks_list:
-        return False, "No face detected. (Ensure face is not covered)"
+        return False, "No face detected. (Ensure your face is well-lit and upright)"
 
     if challenge_type != "none":
         is_live, live_msg = check_expression(landmarks_list[0], challenge_type)
