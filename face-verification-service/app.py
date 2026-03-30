@@ -4,6 +4,11 @@ Handles face encoding, liveness checks, and verification against Supabase voters
 """
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from dotenv import load_dotenv
+import os
+
+load_dotenv()
+LOCAL_IP = os.getenv("LOCAL_IP", "localhost")
 
 from services.face_logic import encode_face, verify_face_match_with_challenge
 from database import get_voter, update_face_encoding
@@ -37,7 +42,7 @@ def create_session(voter_id: str = None):
     return {
         "session_id": session_id,
         "voter_id": voter_id,
-        "qr_code_url": f"http://192.168.1.104:3000/mobile?session_id={session_id}"
+        "qr_code_url": f"http://{LOCAL_IP}:3000/mobile?session_id={session_id}"
     }
 
 @app.get("/create-register-session")
@@ -47,7 +52,7 @@ def create_register_session(voter_id: str = None):
     return {
         "session_id": session_id,
         "voter_id": voter_id,
-        "qr_code_url": f"http://192.168.1.104:3000/mobile/register?session_id={session_id}"
+        "qr_code_url": f"http://{LOCAL_IP}:3000/mobile/register?session_id={session_id}"
     }
 
 @app.get("/session-status/{session_id}")

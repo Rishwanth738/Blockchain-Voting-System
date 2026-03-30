@@ -2,6 +2,8 @@
 
 import React, { useState, useEffect } from "react";
 
+const FACE_API = `http://${process.env.NEXT_PUBLIC_LOCAL_IP || "localhost"}:8000`;
+
 export default function MobileRegistration() {
   const [sessionId, setSessionId] = useState("");
   const [voterId, setVoterId] = useState("");
@@ -14,7 +16,7 @@ export default function MobileRegistration() {
     if (sid) {
       setSessionId(sid);
       // Automatically pair with corresponding voter ID
-      fetch(`http://192.168.1.104:8000/session-status/${sid}`)
+      fetch(`${FACE_API}/session-status/${sid}`)
         .then(r => r.json())
         .then(data => {
           if (data.voter_id) setVoterId(data.voter_id);
@@ -41,7 +43,7 @@ export default function MobileRegistration() {
       if (sessionId) formData.append("session_id", sessionId);
       formData.append("file", file);
 
-      const res = await fetch(`http://192.168.1.104:8000/register-face`, {
+      const res = await fetch(`${FACE_API}/register-face`, {
         method: "POST",
         body: formData,
       });

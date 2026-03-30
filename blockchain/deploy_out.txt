@@ -1,0 +1,7 @@
+
+WARNING: You are using Node.js 20.19.2 which is not supported by Hardhat.
+Please upgrade to 22.10.0 or a later LTS version (even major version number)
+
+
+Deploying with: 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266
+Contract deployed at: 0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9

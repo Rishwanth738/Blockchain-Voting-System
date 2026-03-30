@@ -208,8 +208,15 @@ export default function Home() {
   }
 
   async function getCounts() {
-    const res = await fetch("http://localhost:5000/vote-counts");
-    setCounts(await res.json());
+    try {
+      const res = await fetch("http://localhost:5000/vote-counts");
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Backend error");
+      if (!Array.isArray(data)) throw new Error("Unexpected response format");
+      setCounts(data);
+    } catch (e: any) {
+      alert("Failed to sync votes: " + e.message);
+    }
   }
 
   // ================= UI =================

@@ -2,6 +2,8 @@
 
 import React, { useState, useEffect } from "react";
 
+const FACE_API = `http://${process.env.NEXT_PUBLIC_LOCAL_IP || "localhost"}:8000`;
+
 const challenges = ["smile", "angry", "surprise", "wink"];
 const challengeMsgs: Record<string, string> = {
   smile: "Please Smile Wider (Show Teeth)",
@@ -26,7 +28,7 @@ export default function MobileVerification() {
     if (sid) {
       setSessionId(sid);
       // Automatically pair with corresponding voter ID
-      fetch(`http://192.168.1.104:8000/session-status/${sid}`)
+      fetch(`${FACE_API}/session-status/${sid}`)
         .then(r => r.json())
         .then(data => {
           if (data.voter_id) setVoterId(data.voter_id);
@@ -53,7 +55,7 @@ export default function MobileVerification() {
       if (sessionId) formData.append("session_id", sessionId);
       formData.append("file", file);
 
-      const res = await fetch(`http://192.168.1.104:8000/verify/${challenge}`, {
+      const res = await fetch(`${FACE_API}/verify/${challenge}`, {
         method: "POST",
         body: formData,
       });

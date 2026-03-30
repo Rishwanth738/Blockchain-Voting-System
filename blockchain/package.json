@@ -4,7 +4,9 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "node": "npx hardhat node --state hardhat-state.json",
+    "deploy": "npx hardhat run scripts/deploy.ts --network localhost"
   },
   "keywords": [],
   "author": "",
